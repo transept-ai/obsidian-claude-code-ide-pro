@@ -1,0 +1,48 @@
+/* Claude Code IDE plugin styles */
+
+.claude-code-ide-status-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.claude-code-ide-status-bar .ccide-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  display: inline-block;
+}
+
+.claude-code-ide-status-bar.is-listening .ccide-dot {
+  background: var(--text-warning);
+}
+
+.claude-code-ide-status-bar.is-connected .ccide-dot {
+  background: var(--text-success);
+}
+
+.claude-code-ide-diff-view .ccide-diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  gap: 8px;
+}
+
+.claude-code-ide-diff-view .ccide-diff-header .ccide-diff-title {
+  font-weight: 600;
+}
+
+.claude-code-ide-diff-view .ccide-diff-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.claude-code-ide-diff-view .ccide-merge-host {
+  flex: 1;
+  overflow: auto;
+  height: calc(100% - 49px);
+}
