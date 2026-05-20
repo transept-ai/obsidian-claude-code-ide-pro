@@ -1,16 +1,58 @@
 <p align="center">
-  <img src="./assets/obsidian-claude.png" alt="Obsidian Claude" width="200" />
+  <img src="./assets/header.png" alt="Obsidian Claude Code IDE Pro — Edit, review and research together" />
 </p>
 
-<h1 align="center">Obsidian Claude Code IDE</h1>
+## What this is
 
-<p align="center">
-  An Obsidian plugin that hosts the <strong>Claude Code IDE integration protocol</strong> — the same WebSocket/MCP contract VS Code and JetBrains use.
-</p>
+An Obsidian plugin that **hosts** the [Claude Code](https://docs.anthropic.com/claude/docs/claude-code) IDE integration protocol — the same WebSocket + MCP contract VS Code and JetBrains use, implemented in full for Obsidian.
+
+Unlike a minimal context bridge, every standard IDE tool is wired up: Claude can edit your vault through Obsidian's side-by-side **diff approval UI** (one-click Accept, no terminal double-prompt), navigate you to specific files and lines, and reason about your vault's **backlink graph, wikilinks, frontmatter, and search** via eight Obsidian-native MCP tools.
+
+When you launch `claude` from inside your vault and type `/ide`, Claude connects to Obsidian and gets eyes on everything you're working on. No more copy-pasting paragraphs into the terminal.
+
+*Looking for a minimal read-only context bridge instead? See [petersolopov/obsidian-claude-ide](https://github.com/petersolopov/obsidian-claude-ide) — same protocol, deliberately smaller scope.*
+
+## What it does for you
+
+- **Claude follows you between notes.** Switch tabs and Claude's context updates automatically. Highlight a paragraph and ask "rewrite this" — Claude already has the text. No copy-paste.
+- **Claude navigates Obsidian for you.** Ask "show me Anna's article" — Claude opens the note at the right line.
+- **Edits land as one-click diffs in Obsidian.** Every change Claude proposes opens as a CodeMirror merge view. Accept applies it, Reject discards it. No terminal Y/n prompt — behaves exactly like VS Code or JetBrains.
+- **Claude speaks Obsidian, not just files.** Eight built-in MCP tools expose your vault graph — backlinks, wikilink resolution, frontmatter, search, daily notes, and more. Ask "what links to [[Anna]]?" and Claude gets an answer that respects how Obsidian models links.
+- **Same protocol as VS Code and JetBrains.** Not a wrapper. The actual Claude Code IDE integration contract, implemented for Obsidian.
+
+## Installation
+
+### From the Community Plugins directory
+
+*(Pending submission — once accepted you'll find it under Settings → Community Plugins → Browse.)*
+
+### Manually (current)
+
+1. Download `manifest.json`, `main.js`, and `styles.css` from the [latest GitHub release](https://github.com/vitalii-mevkh/obsidian-claude-code-ide-pro/releases).
+2. Place them under `<your-vault>/.obsidian/plugins/claude-code-ide-pro/`.
+3. In Obsidian → Settings → Community Plugins → enable **Claude Code IDE Pro**.
+
+### Via [BRAT](https://github.com/TfTHacker/obsidian42-brat)
+
+Add `vitalii-mevkh/obsidian-claude-code-ide-pro` as a beta plugin in BRAT, then enable it.
 
 ---
 
-With the plugin enabled, the Claude Code CLI running from your vault sees the same context a VS Code session sees, plus a handful of Obsidian-native tools that let Claude reason about the vault graph (backlinks, wikilinks, frontmatter, vault search).
+## Usage
+
+1. Open a terminal pane inside Obsidian (any terminal plugin works — see recommendation below).
+2. Run `claude` from the vault root.
+3. Inside Claude, type `/ide`. The plugin's lockfile is the only one matching your vault path, so Claude auto-connects to **Obsidian** without prompting.
+4. Status bar shows `● Claude IDE: connected · 1 client`.
+
+Now Claude can see your active note, your tabs, and your selection; can open files for you; and proposes edits via a side-by-side **diff view** with Accept / Reject buttons inside Obsidian.
+
+> ### 🤝 Recommended companion
+> [**`polyipseity/obsidian-terminal`**](https://github.com/polyipseity/obsidian-terminal) — the terminal plugin this one is developed against. It hosts the `claude` CLI inside an Obsidian pane so you stay in a single window. Any terminal plugin works, but this is the smoothest tested setup. Configure its default profile to run `claude` and you're one click from a connected session.
+
+---
+
+## How it works (architecture sketch)
 
 ```
 ~/.claude/ide/<port>.lock  ◀── written on enable, removed on disable
@@ -23,40 +65,31 @@ Claude Code ──ws (auth header)──▶ Obsidian plugin
                           (workspace · vault · metadataCache)
 ```
 
----
-
-## Installation
-
-### From the Community Plugins directory
-
-*(Pending submission — once accepted you'll find it under Settings → Community Plugins → Browse.)*
-
-### Manually (current)
-
-1. Download `manifest.json`, `main.js`, and `styles.css` from the [latest GitHub release](https://github.com/vitalii-mevkh/obsidian-claude-code-ide/releases).
-2. Place them under `<your-vault>/.obsidian/plugins/claude-code-ide/`.
-3. In Obsidian → Settings → Community Plugins → enable **Claude Code IDE**.
-
-### Via [BRAT](https://github.com/TfTHacker/obsidian42-brat)
-
-Add `vitalii-mevkh/obsidian-claude-code-ide` as a beta plugin in BRAT, then enable it.
+Claude Code's CLI scans `~/.claude/ide/*.lock` to discover IDEs. The plugin writes a lockfile pointing to the local WebSocket port it listens on, plus a fresh auth token. When you type `/ide`, the CLI matches the lockfile whose workspace folder is your vault root and connects.
 
 ---
 
-## Usage
+## Reference: tools and protocol
 
-1. Open a terminal pane inside Obsidian (any terminal plugin works — [`polyipseity/obsidian-terminal`](https://github.com/polyipseity/obsidian-terminal) is recommended).
-2. Run `claude` from the vault root.
-3. Inside Claude, type `/ide`. The plugin's lockfile is the only one matching your vault path, so Claude auto-connects to **Obsidian** without prompting.
-4. Status bar shows `● Claude IDE: connected · 1 client`.
+The plugin exposes the full Claude Code IDE protocol — the same 12 tools VS Code's extension implements — plus **8 Obsidian-native MCP tools** that expose the vault graph to any MCP client. The first set is what powers "Claude knows what you opened"; the second is what makes Claude *Obsidian-shaped* rather than just file-aware.
 
-Now Claude can see your active note, your tabs, and your selection; can open files for you; and proposes edits via a side-by-side **diff view** with Accept / Reject buttons inside Obsidian.
+### Obsidian-native MCP tools (8)
 
----
+| Tool | What it does |
+|---|---|
+| `getActiveNoteContent` | Full text of the active note with configurable cap |
+| `getBacklinks` | Every note linking *into* a file (ranked by link count) |
+| `getOutgoingLinks` | Every wikilink / embed *out of* a file with resolved targets |
+| `resolveWikilink` | `"Anna"` → canonical file path + aliases |
+| `getFrontmatter` | YAML frontmatter, tags, and heading outline |
+| `searchVault` | Filename + content search with ranked excerpts |
+| `getDailyNote` | Today's daily-note path (reads Daily Notes plugin config) |
+| `listFilesInFolder` | Recursive markdown listing under a folder |
 
-## Features
+These are advertised via `tools/list`. Claude Code's CLI currently filters which MCP tools reach the model — they aren't surfaced to the LLM today, but any MCP client that connects to the WebSocket can call them. **Re-enabling them for the LLM is on the roadmap** (likely via a parallel stdio MCP server users add to their Claude Code config).
 
-### Standard IDE tools (the protocol contract)
+<details>
+<summary><strong>Standard IDE tools (12)</strong> — consumed by Claude Code's CLI internally</summary>
 
 | Tool | What it does |
 |---|---|
@@ -73,24 +106,22 @@ Now Claude can see your active note, your tabs, and your selection; can open fil
 | `getDiagnostics` | Returns `[]` (Obsidian has no LSP) |
 | `executeCode` | Soft failure (no Jupyter) |
 
-### Obsidian-native MCP tools
+</details>
 
-| Tool | What it does |
-|---|---|
-| `getActiveNoteContent` | Full text of the active note with configurable cap |
-| `getBacklinks` | Every note linking *into* a file (ranked by link count) |
-| `getOutgoingLinks` | Every wikilink / embed *out of* a file with resolved targets |
-| `resolveWikilink` | `"Anna"` → canonical file path + aliases |
-| `getFrontmatter` | YAML frontmatter, tags, and heading outline |
-| `searchVault` | Filename + content search with ranked excerpts |
-| `getDailyNote` | Today's daily-note path (reads Daily Notes plugin config) |
-| `listFilesInFolder` | Recursive markdown listing under a folder |
+---
+
+## Roadmap
+
+- **Surface Obsidian-native MCP tools to the LLM** — they're registered but Claude Code's CLI currently filters them out. Add a parallel stdio MCP server so Claude can call `getBacklinks` / `resolveWikilink` / `searchVault` mid-conversation.
+- **Custom terminal wrapper with clickable links** — embed our own terminal pane (xterm.js + node-pty) so we can intercept Claude's output and render file paths as clickable Obsidian-internal links inline. Pairs with `obsidian-terminal` for now; this would be a more integrated alternative.
+- **Re-enable `selection_changed` push** with smarter dedup timing — was disabled in v0.1.0 because it surfaced selections at unwanted moments.
+- **More vault-aware tools** — tag graph, embeds resolver, wikilink integrity checker (would expose validator-style data to Claude).
 
 ---
 
 ## Settings
 
-Settings → Claude Code IDE:
+Settings → Claude Code IDE Pro:
 
 - **Active-note content cap** — characters returned by `getActiveNoteContent` before truncation (default 50,000).
 - **searchVault max results** — hits per search (default 50).
@@ -156,8 +187,8 @@ Protocol reverse-engineering credit:
 ## Building from source
 
 ```bash
-git clone https://github.com/vitalii-mevkh/obsidian-claude-code-ide.git
-cd obsidian-claude-code-ide
+git clone https://github.com/vitalii-mevkh/obsidian-claude-code-ide-pro.git
+cd obsidian-claude-code-ide-pro
 npm install
 npm run build       # one-shot production build → main.js
 npm run dev         # esbuild watch mode
@@ -185,7 +216,6 @@ node scripts/smoke-diff.mjs
 
 # Obsidian-native tools — backlinks, wikilinks, search, frontmatter, ...
 node scripts/smoke-obsidian-tools.mjs
-
 ```
 
 *(`scripts/listen-notifications.mjs` exists for the deferred `selection_changed` notification — currently a no-op since the push isn't wired in v0.1.0.)*
