@@ -1,6 +1,16 @@
-# Obsidian Claude Code IDE
+<p align="center">
+  <img src="./assets/obsidian-claude.png" alt="Obsidian Claude" width="200" />
+</p>
 
-An Obsidian plugin that hosts the **Claude Code IDE integration protocol** — the same WebSocket/MCP contract VS Code and JetBrains use. With the plugin enabled, the Claude Code CLI running from your vault sees the same context a VS Code session sees, plus a handful of Obsidian-native tools that let Claude reason about the vault graph (backlinks, wikilinks, frontmatter, vault search).
+<h1 align="center">Obsidian Claude Code IDE</h1>
+
+<p align="center">
+  An Obsidian plugin that hosts the <strong>Claude Code IDE integration protocol</strong> — the same WebSocket/MCP contract VS Code and JetBrains use.
+</p>
+
+---
+
+With the plugin enabled, the Claude Code CLI running from your vault sees the same context a VS Code session sees, plus a handful of Obsidian-native tools that let Claude reason about the vault graph (backlinks, wikilinks, frontmatter, vault search).
 
 ```
 ~/.claude/ide/<port>.lock  ◀── written on enable, removed on disable
