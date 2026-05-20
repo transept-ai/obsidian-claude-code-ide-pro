@@ -1,14 +1,16 @@
-<p align="center">
-  <img src="./assets/header.png" alt="Obsidian Claude Code IDE Pro — Edit, review and research together" />
-</p>
+
 
 ## What this is
 
-An Obsidian plugin that **hosts** the [Claude Code](https://docs.anthropic.com/claude/docs/claude-code) IDE integration protocol — the same WebSocket + MCP contract VS Code and JetBrains use, implemented in full for Obsidian.
+> Work with Claude Code in Obsidian as smoothly as you work in your IDE
+
+An Obsidian plugin that **hosts** the [Claude Code](https://docs.anthropic.com/claude/docs/claude-code) IDE integration protocol — the same WebSocket + MCP contract professional IDEs like VS Code or JetBrains use, implemented in full for Obsidian.
 
 Unlike a minimal context bridge, every standard IDE tool is wired up: Claude can edit your vault through Obsidian's side-by-side **diff approval UI** (one-click Accept, no terminal double-prompt), navigate you to specific files and lines, and reason about your vault's **backlink graph, wikilinks, frontmatter, and search** via eight Obsidian-native MCP tools.
 
 When you launch `claude` from inside your vault and type `/ide`, Claude connects to Obsidian and gets eyes on everything you're working on. No more copy-pasting paragraphs into the terminal.
+
+Made during my experiments with my fiction universe lore wiki for [Transept.ai](http://Transept.ai) and WritingTool RAG features. Inspired by [llm-wiki.](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 
 
 *Looking for a minimal read-only context bridge instead? See [petersolopov/obsidian-claude-ide](https://github.com/petersolopov/obsidian-claude-ide) — same protocol, deliberately smaller scope.*
 
@@ -48,7 +50,18 @@ Add `vitalii-mevkh/obsidian-claude-code-ide-pro` as a beta plugin in BRAT, then 
 Now Claude can see your active note, your tabs, and your selection; can open files for you; and proposes edits via a side-by-side **diff view** with Accept / Reject buttons inside Obsidian.
 
 > ### 🤝 Recommended companion
+>
 > [**`polyipseity/obsidian-terminal`**](https://github.com/polyipseity/obsidian-terminal) — the terminal plugin this one is developed against. It hosts the `claude` CLI inside an Obsidian pane so you stay in a single window. Any terminal plugin works, but this is the smoothest tested setup. Configure its default profile to run `claude` and you're one click from a connected session.
+
+## 🗺️ Roadmap
+
+> Ultimate goal – make working with Claude in Obsidian as smooth and natural as collaborating with a friend sitting next to you. 
+
+- **Surface Obsidian-native MCP tools to the LLM** — they're registered but Claude Code's CLI currently filters them out. Add a parallel stdio MCP server so Claude can call `getBacklinks` / `resolveWikilink` / `searchVault` mid-conversation.
+- **Custom terminal wrapper with clickable links** — embed our own terminal pane (xterm.js + node-pty) so we can intercept Claude's output and render file paths as clickable Obsidian-internal links inline. Pairs with `obsidian-terminal` for now; this would be a more integrated alternative.
+- **Re-enable** `selection_changed` **push** with smarter dedup timing — was disabled in v0.1.0 because it surfaced selections at unwanted moments.
+- **More vault-aware tools** — tag graph, embeds resolver, wikilink integrity checker (would expose validator-style data to Claude).
+- **Autonomous invocation** – so that Claude can decide to message you himself and tell you that you are absolutely right. 
 
 ---
 
@@ -75,47 +88,41 @@ The plugin exposes the full Claude Code IDE protocol — the same 12 tools VS Co
 
 ### Obsidian-native MCP tools (8)
 
-| Tool | What it does |
-|---|---|
-| `getActiveNoteContent` | Full text of the active note with configurable cap |
-| `getBacklinks` | Every note linking *into* a file (ranked by link count) |
-| `getOutgoingLinks` | Every wikilink / embed *out of* a file with resolved targets |
-| `resolveWikilink` | `"Anna"` → canonical file path + aliases |
-| `getFrontmatter` | YAML frontmatter, tags, and heading outline |
-| `searchVault` | Filename + content search with ranked excerpts |
-| `getDailyNote` | Today's daily-note path (reads Daily Notes plugin config) |
-| `listFilesInFolder` | Recursive markdown listing under a folder |
+
+| Tool                   | What it does                                                 |
+| ---------------------- | ------------------------------------------------------------ |
+| `getActiveNoteContent` | Full text of the active note with configurable cap           |
+| `getBacklinks`         | Every note linking *into* a file (ranked by link count)      |
+| `getOutgoingLinks`     | Every wikilink / embed *out of* a file with resolved targets |
+| `resolveWikilink`      | `"Anna"` → canonical file path + aliases                     |
+| `getFrontmatter`       | YAML frontmatter, tags, and heading outline                  |
+| `searchVault`          | Filename + content search with ranked excerpts               |
+| `getDailyNote`         | Today's daily-note path (reads Daily Notes plugin config)    |
+| `listFilesInFolder`    | Recursive markdown listing under a folder                    |
+
 
 These are advertised via `tools/list`. Claude Code's CLI currently filters which MCP tools reach the model — they aren't surfaced to the LLM today, but any MCP client that connects to the WebSocket can call them. **Re-enabling them for the LLM is on the roadmap** (likely via a parallel stdio MCP server users add to their Claude Code config).
 
-<details>
-<summary><strong>Standard IDE tools (12)</strong> — consumed by Claude Code's CLI internally</summary>
+**Standard IDE tools (12)** — consumed by Claude Code's CLI internally
 
-| Tool | What it does |
-|---|---|
-| `getOpenEditors` | Open tabs with `isActive` / `isDirty` flags |
-| `getCurrentSelection` | Current selection in the active note (works even when terminal has focus) |
-| `getLatestSelection` | Cached last non-empty selection |
-| `getWorkspaceFolders` | Vault root as `{name, uri, path}` |
-| `openFile` | Open a file; supports `line`, `startText` / `endText` selection ranges |
-| `openDiff` | Blocking RPC: side-by-side diff via CodeMirror 6 `MergeView`, Accept / Reject |
-| `checkDocumentDirty` | Unsaved-changes flag for a file |
-| `saveDocument` | Persist a file's unsaved changes |
-| `close_tab` | Close a tab by label |
-| `closeAllDiffTabs` | Close every Claude-created diff view |
-| `getDiagnostics` | Returns `[]` (Obsidian has no LSP) |
-| `executeCode` | Soft failure (no Jupyter) |
 
-</details>
+| Tool                  | What it does                                                                  |
+| --------------------- | ----------------------------------------------------------------------------- |
+| `getOpenEditors`      | Open tabs with `isActive` / `isDirty` flags                                   |
+| `getCurrentSelection` | Current selection in the active note (works even when terminal has focus)     |
+| `getLatestSelection`  | Cached last non-empty selection                                               |
+| `getWorkspaceFolders` | Vault root as `{name, uri, path}`                                             |
+| `openFile`            | Open a file; supports `line`, `startText` / `endText` selection ranges        |
+| `openDiff`            | Blocking RPC: side-by-side diff via CodeMirror 6 `MergeView`, Accept / Reject |
+| `checkDocumentDirty`  | Unsaved-changes flag for a file                                               |
+| `saveDocument`        | Persist a file's unsaved changes                                              |
+| `close_tab`           | Close a tab by label                                                          |
+| `closeAllDiffTabs`    | Close every Claude-created diff view                                          |
+| `getDiagnostics`      | Returns `[]` (Obsidian has no LSP)                                            |
+| `executeCode`         | Soft failure (no Jupyter)                                                     |
 
----
 
-## Roadmap
 
-- **Surface Obsidian-native MCP tools to the LLM** — they're registered but Claude Code's CLI currently filters them out. Add a parallel stdio MCP server so Claude can call `getBacklinks` / `resolveWikilink` / `searchVault` mid-conversation.
-- **Custom terminal wrapper with clickable links** — embed our own terminal pane (xterm.js + node-pty) so we can intercept Claude's output and render file paths as clickable Obsidian-internal links inline. Pairs with `obsidian-terminal` for now; this would be a more integrated alternative.
-- **Re-enable `selection_changed` push** with smarter dedup timing — was disabled in v0.1.0 because it surfaced selections at unwanted moments.
-- **More vault-aware tools** — tag graph, embeds resolver, wikilink integrity checker (would expose validator-style data to Claude).
 
 ---
 
@@ -135,11 +142,12 @@ Settings → Claude Code IDE Pro:
 The plugin runs a **WebSocket server bound to `127.0.0.1` (loopback only)** on an OS-picked ephemeral port in the 10000–65535 range. This server is used solely by the Claude Code CLI running on the same machine to query Obsidian's state. **No outbound network calls are ever made.**
 
 The server:
+
 - Accepts connections only over the loopback interface — never the LAN or internet.
 - Requires a per-session UUID auth token (see [Security model](#security-model) below) on every WebSocket upgrade request. Connections without the matching `x-claude-code-ide-authorization` header are rejected.
 - Is started in `onload()` and torn down in `onunload()` — disabling the plugin closes the port and removes the lockfile.
 
-The plugin is also **`isDesktopOnly: true`** — it does not load on Obsidian mobile.
+The plugin is also `**isDesktopOnly: true`** — it does not load on Obsidian mobile.
 
 ---
 
@@ -147,11 +155,13 @@ The plugin is also **`isDesktopOnly: true`** — it does not load on Obsidian mo
 
 For protocol compliance with Claude Code's IDE discovery mechanism, the plugin reads and writes files under your home directory **outside the vault**:
 
-| Path | Why | When |
-|---|---|---|
-| `~/.claude/ide/` (directory) | Created with mode `0700` if missing — Claude Code's discovery folder | On enable |
-| `~/.claude/ide/<port>.lock` | Lockfile (mode `0600`) telling Claude Code "Obsidian is listening at this port with this auth token". Same format VS Code and JetBrains use. | Written on enable, deleted on disable |
-| `~/.obsidian/daily-notes.json` | Read-only — used by the `getDailyNote` MCP tool to know your daily-note folder and date format | Only when `getDailyNote` is called |
+
+| Path                           | Why                                                                                                                                          | When                                  |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `~/.claude/ide/` (directory)   | Created with mode `0700` if missing — Claude Code's discovery folder                                                                         | On enable                             |
+| `~/.claude/ide/<port>.lock`    | Lockfile (mode `0600`) telling Claude Code "Obsidian is listening at this port with this auth token". Same format VS Code and JetBrains use. | Written on enable, deleted on disable |
+| `~/.obsidian/daily-notes.json` | Read-only — used by the `getDailyNote` MCP tool to know your daily-note folder and date format                                               | Only when `getDailyNote` is called    |
+
 
 The lockfile contains: process PID, vault root, ideName (`"Obsidian"`), transport (`"ws"`), `runningInWindows` boolean, and the auth token. **No vault content** leaves the vault folder via these paths.
 
@@ -174,13 +184,13 @@ This plugin sends **no telemetry**, analytics, crash reports, or any other data 
 
 ## Third-party code
 
-- [`ws`](https://github.com/websockets/ws) — MIT — Node.js WebSocket library, bundled into `main.js`.
-- [`@codemirror/merge`](https://github.com/codemirror/merge) — MIT — CodeMirror 6 merge view, bundled into `main.js` (other `@codemirror/*` packages are provided by Obsidian's runtime and remain external).
+- `[ws](https://github.com/websockets/ws)` — MIT — Node.js WebSocket library, bundled into `main.js`.
+- `[@codemirror/merge](https://github.com/codemirror/merge)` — MIT — CodeMirror 6 merge view, bundled into `main.js` (other `@codemirror/`* packages are provided by Obsidian's runtime and remain external).
 
 Protocol reverse-engineering credit:
 
-- [`coder/claudecode.nvim`](https://github.com/coder/claudecode.nvim) — Apache 2.0 — `PROTOCOL.md` is the authoritative spec this implementation follows.
-- [`manzaltu/claude-code-ide.el`](https://github.com/manzaltu/claude-code-ide.el) — GPLv3 — reference for adding custom MCP tools beyond the standard IDE 12.
+- `[coder/claudecode.nvim](https://github.com/coder/claudecode.nvim)` — Apache 2.0 — `PROTOCOL.md` is the authoritative spec this implementation follows.
+- `[manzaltu/claude-code-ide.el](https://github.com/manzaltu/claude-code-ide.el)` — GPLv3 — reference for adding custom MCP tools beyond the standard IDE 12.
 
 ---
 
