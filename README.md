@@ -2,6 +2,10 @@
 
 ## What this is
 
+<p align="center">
+  <img src="assets/header.png" alt="Claude Code IDE Pro Header Screenshot" width="800">
+</p>
+
 > Work with Claude Code in Obsidian as smoothly as you work in your IDE
 
 An Obsidian plugin that **hosts** the [Claude Code](https://docs.anthropic.com/claude/docs/claude-code) IDE integration protocol — the same WebSocket + MCP contract professional IDEs like VS Code or JetBrains use, implemented in full for Obsidian.
