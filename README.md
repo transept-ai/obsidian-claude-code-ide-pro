@@ -26,6 +26,19 @@ Made by [Transept](https://transept.ai) — a workshop building AI tools for tra
 - **Edits land as one-click diffs in Obsidian.** Every change Claude proposes opens as a CodeMirror merge view. Accept applies it, Reject discards it. No terminal Y/n prompt — behaves exactly like VS Code or JetBrains.
 - **Same protocol as VS Code and JetBrains.** Not a wrapper. The actual Claude Code IDE integration contract, implemented for Obsidian.
 
+## Recommended companions
+
+This plugin is the **IDE host** — the part that lives inside Obsidian and lets Claude see your editor, open files, and propose diffs. Pair it with these two for the full setup:
+
+- **[`rps321321/obsidian-mcp-pro`](https://github.com/rps321321/obsidian-mcp-pro)** — a standalone stdio MCP server that exposes vault graph queries (backlinks, wikilinks, frontmatter, search, daily notes) **to the LLM**. The `/ide` channel can't surface custom MCP tools to the model; `obsidian-mcp-pro` covers that gap and runs filesystem-direct, so no extra Obsidian plugin is needed. One-line install:
+  ```
+  claude mcp add obsidian-mcp-pro --env OBSIDIAN_VAULT_PATH=/path/to/your/vault -- npx -y obsidian-mcp-pro
+  ```
+
+- **[`polyipseity/obsidian-terminal`](https://github.com/polyipseity/obsidian-terminal)** — the terminal plugin this one is developed against. Hosts the `claude` CLI inside an Obsidian pane so you stay in a single window. Any terminal plugin works, but this is the smoothest tested setup. Configure its default profile to run `claude` and you're one click from a connected session.
+
+Together they cover the three things you actually want: a Claude pane inside Obsidian (`obsidian-terminal`), Claude driving the editor (this plugin), and Claude reasoning about the vault graph (`obsidian-mcp-pro`).
+
 ## See it in action
 
 <p align="center">
@@ -77,15 +90,10 @@ The command and right-click options fire the protocol's `at_mentioned` notificat
 
 Selection tracking also runs passively: when you highlight text or switch files, Claude is told via `selection_changed`. Pure cursor wiggles (empty selection, same file) are filtered out to keep the signal clean.
 
-> ### 🤝 Recommended companion
->
-> [**`polyipseity/obsidian-terminal`**](https://github.com/polyipseity/obsidian-terminal) — the terminal plugin this one is developed against. It hosts the `claude` CLI inside an Obsidian pane so you stay in a single window. Any terminal plugin works, but this is the smoothest tested setup. Configure its default profile to run `claude` and you're one click from a connected session.
-
 ## 🗺️ Roadmap
 
 > Ultimate goal – make working with Claude in Obsidian as smooth and natural as collaborating with a friend sitting next to you. 
 
-- **Surface Obsidian-native MCP tools to the LLM** — they're registered but Claude Code's CLI currently filters them out. Add a parallel stdio MCP server so Claude can call `getBacklinks` / `resolveWikilink` / `searchVault` mid-conversation.
 - **Custom terminal wrapper with clickable links** — embed our own terminal pane (xterm.js + node-pty) so we can intercept Claude's output and render file paths as clickable Obsidian-internal links inline. Pairs with `obsidian-terminal` for now; this would be a more integrated alternative.
 - **Zero-touch auto-connect** — skip the `/ide` step entirely by exposing a preferred-port setting and coordinating with the terminal plugin to set `CLAUDE_CODE_SSE_PORT` at spawn time. Today a random port is allocated each restart, so the env var trick only works for users who manually align the two.
 - **More vault-aware tools** — tag graph, embeds resolver, wikilink integrity checker (would expose validator-style data to Claude).
