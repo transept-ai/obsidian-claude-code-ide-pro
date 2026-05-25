@@ -19,10 +19,8 @@ import { registerStubTools } from "./handlers/stubs";
 import { registerDiffTools } from "./handlers/diff";
 import { registerObsidianTools } from "./handlers/obsidian-tools";
 import { DIFF_VIEW_TYPE, DiffView } from "./views/diff-view";
-// SelectionNotifier is intentionally NOT wired up in v0.1.0 — the push
-// surfaced selections at unwanted moments and added noise. Source kept
-// in src/notifier.ts for future re-enable.
-// import { SelectionNotifier } from "./notifier";
+import { SelectionNotifier } from "./notifier";
+import { AtMentionController } from "./at-mention";
 import {
   ClaudeCodeIdeSettings,
   ClaudeCodeIdeSettingTab,
@@ -34,6 +32,8 @@ export default class ClaudeCodeIdePlugin extends Plugin {
   private server?: IdeWsServer;
   private lockfile?: LockfileManager;
   private statusBar?: StatusBar;
+  private notifier?: SelectionNotifier;
+  private atMention?: AtMentionController;
   private authToken = "";
   private vaultRoot = "";
 
@@ -87,6 +87,10 @@ export default class ClaudeCodeIdePlugin extends Plugin {
         const port = this.server?.getPort() ?? 0;
         const n = this.server?.clientCount() ?? 0;
         this.statusBar?.setConnected(port, n);
+        // Flush current selection so the newly-connected Claude session
+        // immediately sees what the user is looking at, without waiting
+        // for the next selection change.
+        this.notifier?.flushNow();
       },
       onDisconnect: () => {
         const port = this.server?.getPort() ?? 0;
@@ -105,9 +109,21 @@ export default class ClaudeCodeIdePlugin extends Plugin {
       this.statusBar?.setOff();
       return;
     }
+
+    // Push surfaces: passive selection_changed (debounced, non-empty only)
+    // and active at_mentioned via the "Send to Claude" command + right-click.
+    this.notifier = new SelectionNotifier(this, this.server, ctx);
+    this.notifier.install();
+    this.atMention = new AtMentionController(this, this.server, ctx);
+    this.atMention.install();
   }
 
   async onunload(): Promise<void> {
+    try {
+      this.notifier?.uninstall();
+    } catch (err) {
+      console.error("[claude-code-ide] notifier cleanup error", err);
+    }
     try {
       this.lockfile?.cleanup();
     } catch (err) {

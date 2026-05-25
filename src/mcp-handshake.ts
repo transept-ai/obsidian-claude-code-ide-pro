@@ -3,7 +3,7 @@ import { ToolRegistry, ToolNotFoundError } from "./tools-registry";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const SERVER_NAME = "Claude Code IDE (Obsidian)";
-const SERVER_VERSION = "0.1.0";
+const SERVER_VERSION = "0.1.2";
 
 // Registers the four MCP framing methods every IDE host must respond to:
 //   initialize, notifications/initialized, tools/list, tools/call

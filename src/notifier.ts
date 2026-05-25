@@ -17,6 +17,8 @@ const DEBOUNCE_MS = 150;
 export class SelectionNotifier {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private lastPayloadKey = "";
+  private lastFilePath = "";
+  private lastWasEmpty = true;
 
   constructor(
     private readonly plugin: Plugin,
@@ -49,11 +51,14 @@ export class SelectionNotifier {
 
   // Force-flush, used when a new client connects so they receive the current
   // state without having to wait for the user to move the cursor. We clear
-  // the dedup cache so the emit definitely fires.
+  // every memoized field so the next emit is treated as "fresh" — both the
+  // dedup and the cursor-wiggle filters get a clean slate.
   flushNow(): void {
     if (this.timer) clearTimeout(this.timer);
     this.timer = undefined;
     this.lastPayloadKey = "";
+    this.lastFilePath = "";
+    this.lastWasEmpty = true;
     this.emit();
   }
 
@@ -72,10 +77,25 @@ export class SelectionNotifier {
     if (!sel) return;
     this.ctx.setLatestSelection(sel);
 
-    // Deduplicate: if nothing changed, skip the broadcast.
+    // Skip only the *true* noise case: empty selection, same file, was
+    // already empty last time. That filters cursor wiggles and arrow-key
+    // moves while still pushing:
+    //   - file switches (Claude needs to know what's active)
+    //   - non-empty → empty transitions (Claude needs to know you deselected)
+    //   - empty → non-empty transitions (a fresh selection)
+    const isCursorWiggle =
+      sel.selection.isEmpty &&
+      sel.filePath === this.lastFilePath &&
+      this.lastWasEmpty;
+    if (isCursorWiggle) return;
+
+    // Deduplicate: identical payloads (e.g. re-selecting the exact same
+    // range twice) don't need to re-broadcast.
     const key = JSON.stringify(sel);
     if (key === this.lastPayloadKey) return;
     this.lastPayloadKey = key;
+    this.lastFilePath = sel.filePath;
+    this.lastWasEmpty = sel.selection.isEmpty;
 
     this.server.broadcast("selection_changed", sel as unknown as JsonValue);
   }
